@@ -12,8 +12,16 @@ struct ContentView: View {
         VStack {
             Color.purple
             Circle()
+            
+        
+            
+            
+            
+            
+            
+            
             Color.green
-            Color.yellow
+            Color.red
         
         }
         .padding()
