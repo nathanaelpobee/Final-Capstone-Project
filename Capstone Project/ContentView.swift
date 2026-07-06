@@ -20,7 +20,7 @@ struct ContentView: View {
             
     
             Color.green
-            Color.pink
+            Color.yellow
         
         }
         .padding()
