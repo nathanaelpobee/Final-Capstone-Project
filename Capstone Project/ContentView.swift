@@ -15,7 +15,8 @@ struct ContentView: View {
             
             
             
-            
+            Color.blue
+            Color.blue
             
     
             Color.green
