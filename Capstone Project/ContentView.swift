@@ -13,6 +13,10 @@ struct ContentView: View {
             Color.purple
             Circle()
             
+            
+            
+            
+            
     
             Color.green
             Color.red
