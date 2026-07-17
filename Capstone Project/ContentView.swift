@@ -13,9 +13,10 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     
-                    Text("Chicago CareFinder")
+                    Text("Find Healthcare Near You")
                         .font(.largeTitle)
                         .fontWeight(.bold)
+                      
                 }
             }
         }
