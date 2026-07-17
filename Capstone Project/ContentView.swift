@@ -9,24 +9,15 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Color.purple
-            Circle()
-            
-            
-            
-            Color.blue
-            Color.blue
-            
-    
-            Color.green
-            Color.yellow
-        
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    
+                    Text("Chicago CareFinder")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                }
+            }
         }
-        .padding()
     }
-}
-
-#Preview {
-    ContentView()
 }
