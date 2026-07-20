@@ -16,6 +16,7 @@ struct ContentView: View {
                     Text("Find Healthcare Near You")
                         .font(.largeTitle)
                         .fontWeight(.bold)
+                
                       
                 }
             }
