@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 // MARK: - Data Model
 // This describes what one clinic looks like
@@ -138,7 +139,7 @@ let sampleClinics: [Clinic] = [
 ]
 
 // MARK: - Main Content View
-// This is the app's starting point. It now shows 4 tabs at the bottom.
+// This is the app's starting point. It shows 4 tabs at the bottom.
 
 struct ContentView: View {
     var body: some View {
@@ -159,15 +160,43 @@ struct ContentView: View {
 }
 
 // MARK: - Home Screen
-// First tab, matches the "Find Free Healthcare Near You" mockup
+// First tab — working search, tappable filter pills, emergency banner, accessibility link
 
 struct HomeView: View {
     @State private var searchText = ""
+
+    var searchResults: [Clinic] {
+        if searchText.isEmpty { return [] }
+        return sampleClinics.filter { clinic in
+            clinic.name.localizedCaseInsensitiveContains(searchText) ||
+            clinic.neighborhood.localizedCaseInsensitiveContains(searchText) ||
+            clinic.services.contains { $0.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+
+                    // Emergency banner — tapping it dials 911
+                    Button {
+                        callNumber("911")
+                    } label: {
+                        HStack {
+                            Image(systemName: "cross.case.fill")
+                            Text("Medical Emergency? Call 911")
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Image(systemName: "phone.fill")
+                        }
+                        .padding()
+                        .foregroundColor(.white)
+                        .background(Color.red)
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+
                     VStack {
                         Text("Find Free Healthcare")
                         Text("Near You").foregroundColor(.teal)
@@ -182,22 +211,73 @@ struct HomeView: View {
 
                     HStack {
                         Image(systemName: "magnifyingglass")
-                        TextField("Search by ZIP, neighborhood, or service", text: $searchText)
+                        TextField("Search by name, neighborhood, or service", text: $searchText)
+                        if !searchText.isEmpty {
+                            Button {
+                                searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(10)
                     .padding(.horizontal)
 
-                    NavigationLink(destination: MapView()) {
-                        Label("View Interactive Map", systemImage: "map")
-                    }
-                    .buttonStyle(.bordered)
+                    if searchText.isEmpty {
+                        NavigationLink(destination: MapView()) {
+                            Label("View Interactive Map", systemImage: "map")
+                        }
+                        .buttonStyle(.bordered)
 
-                    HStack {
-                        FilterPill(text: "Primary Care")
-                        FilterPill(text: "Dental")
-                        FilterPill(text: "Mental Health")
+                        HStack {
+                            FilterPill(text: "Primary Care") { searchText = "Primary Care" }
+                            FilterPill(text: "Dental") { searchText = "Dental" }
+                            FilterPill(text: "Mental Health") { searchText = "Mental Health" }
+                        }
+
+                        NavigationLink(destination: AccessibilityView()) {
+                            Label("Accessibility Info", systemImage: "figure.roll")
+                        }
+                        .buttonStyle(.bordered)
+                        .padding(.top, 4)
+                    }
+
+                    if !searchText.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("\(searchResults.count) result\(searchResults.count == 1 ? "" : "s")")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+
+                            if searchResults.isEmpty {
+                                Text("No clinics found. Try a different name, neighborhood, or service.")
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 20)
+                            } else {
+                                ForEach(searchResults) { clinic in
+                                    NavigationLink(destination: ClinicDetailView(clinic: clinic)) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(clinic.name)
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            Text(clinic.neighborhood)
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                            Text(clinic.payment)
+                                                .font(.caption)
+                                                .foregroundColor(clinic.payment == "Free" ? .green : .blue)
+                                        }
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(10)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
                 .padding()
@@ -207,15 +287,27 @@ struct HomeView: View {
     }
 }
 
-// Small reusable pill/tag view used on the home screen
+// Opens the Phone app with a number pre-filled (only works on a real device, not the Simulator)
+func callNumber(_ number: String) {
+    if let url = URL(string: "tel://\(number)") {
+        UIApplication.shared.open(url)
+    }
+}
+
+// Small reusable pill/tag BUTTON used on the home screen
 struct FilterPill: View {
     let text: String
+    var action: () -> Void = {}
+
     var body: some View {
-        Text(text)
-            .font(.caption)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(Color.teal.opacity(0.15))
-            .cornerRadius(20)
+        Button(action: action) {
+            Text(text)
+                .font(.caption)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color.teal.opacity(0.15))
+                .foregroundColor(.teal)
+                .cornerRadius(20)
+        }
     }
 }
 
@@ -272,7 +364,7 @@ struct ClinicListView: View {
 }
 
 // MARK: - Clinic Detail Screen
-// Popup card shown when you tap a clinic on the map or in the list
+// Popup card shown when you tap a clinic on the map, list, search, or mental health tab
 
 struct ClinicDetailView: View {
     let clinic: Clinic
@@ -293,7 +385,6 @@ struct ClinicDetailView: View {
 
                 Text("Services").font(.headline).padding(.top, 8)
 
-                // Using a wrapping layout so long service lists don't run off screen
                 FlowLayout(items: clinic.services)
 
                 Spacer()
@@ -303,15 +394,12 @@ struct ClinicDetailView: View {
     }
 }
 
-// Simple wrapping row of service tags, since some clinics have 6+ services
+// Wrapping row of service tags, since some clinics have 6+ services
 struct FlowLayout: View {
     let items: [String]
 
     var body: some View {
-        var currentRowWidth: CGFloat = 0
-        let screenWidth: CGFloat = 340
-
-        return VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             ForEach(Array(stride(from: 0, to: items.count, by: 3)), id: \.self) { start in
                 HStack {
                     ForEach(items[start..<min(start + 3, items.count)], id: \.self) { service in
@@ -324,7 +412,6 @@ struct FlowLayout: View {
                 }
             }
         }
-        .onAppear { currentRowWidth = screenWidth } // keeps the compiler happy, no real effect
     }
 }
 
@@ -372,6 +459,36 @@ struct MentalHealthView: View {
                 }
             }
             .navigationTitle("Mental Health")
+        }
+    }
+}
+
+// MARK: - Accessibility Screen
+// Reached from the "Accessibility Info" button on the Home tab
+
+struct AccessibilityView: View {
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Our Commitment") {
+                    Text("Chicago CareFinder is built to work with iOS accessibility features so everyone can find care, regardless of ability.")
+                        .padding(.vertical, 4)
+                }
+
+                Section("Supported Features") {
+                    Label("VoiceOver screen reader support", systemImage: "speaker.wave.2.fill")
+                    Label("Dynamic Type — text resizes with your iOS settings", systemImage: "textformat.size")
+                    Label("High-contrast color choices for readability", systemImage: "circle.lefthalf.filled")
+                    Label("Large, tappable buttons and touch targets", systemImage: "hand.tap.fill")
+                }
+
+                Section("Need Help?") {
+                    Text("If you run into an accessibility issue using this app, let us know so we can improve it.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("Accessibility")
         }
     }
 }
